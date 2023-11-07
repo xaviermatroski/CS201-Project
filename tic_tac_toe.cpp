@@ -611,8 +611,8 @@ int main(){
 	}
 	
 	// The game ended printing the winner
-	if (static_value(root) == -1) cout << "\nX is the winner! AI lost" << endl;
-	else if (static_value(root) == 1) cout << "\nO is the winner! AI won" << endl;
+	if (static_value(root) == -1) cout << "\nX is the winner!" << endl;
+	else if (static_value(root) == 1) cout << "\nO is the winner!" << endl;
 	else cout << "\nIt's a draw!" << endl;
 	cout << "Game Over" << endl;
 }
