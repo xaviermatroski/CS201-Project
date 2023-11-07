@@ -35,6 +35,7 @@ struct tree{
     motion move;
     int eval;
     int n;
+	int depthover;
     tree** child;
 };
 
@@ -69,6 +70,20 @@ void print_board(tree* node)
         }
         printf("\n");
     }
+}
+
+void free_node(tree* node){
+	if (node == NULL) return;
+	if (node->n == 0){
+		free(node);
+		return;
+	} else {
+		for (int i=node->n-1; i>=0; i--){
+			free_node(node->child[i]); // depth first freeing
+		}
+		free(node); // free the current node
+		return;
+	}
 }
 
 bool further_capture(int board[8][8], int x, int y){
@@ -1109,7 +1124,13 @@ int alphabeta(tree* node, bool ismax, int depth, int alpha=-2147483648, int beta
 		// base condition
 		// we are at the leaf node
 		alphabeta_counter++;
-		return static_value(node);
+		int val = static_value(node);
+		if ((val == 5000 && ismax) || (val == -5000 && !ismax)){
+			node->depthover = depth;
+		} else {
+			node->depthover = -1;
+		}
+		return val; // consider this node to be a leaf node
 	}
 	
 	if (ismax){
@@ -1120,41 +1141,64 @@ int alphabeta(tree* node, bool ismax, int depth, int alpha=-2147483648, int beta
 		if (node->n == 0){
 			// this could be a draw or a win
 			alphabeta_counter++; // this variable calculate static calculations so it needs to be incremented
-			return static_value(node); // consider this node to be a leaf node
+			int val = static_value(node);
+			if (val == -5000){
+				node->depthover = depth;
+			} else {
+				node->depthover = -1;
+			}
+			return val; // consider this node to be a leaf node
 		}
 		
-		if (node->n == 1){
+		/*
+		// node->move does not change
+		while (node->n == 1){
 			// there is only one move now
 			commit_move(node, node->child[0]->move);
 			free(node->child[0]);
 			node->n = 0;
 			node->child = NULL;
-			return alphabeta(node, !node->state.chance, depth-1, alpha, beta);
+			gen_moves(node);
 		}
+		*/
 		
 		
 		int max = alphabeta(node->child[0],!node->child[0]->state.chance,depth-1,alpha,beta);
+		int	curr_depthover = node->child[0]->depthover;
+
 		if (max > alpha) alpha = max;
 		if (alpha >= beta){
 			// condition for pruning of the tree
 			//node->eval = max; // We are not evaluating node->eval because it can even be greater than max
 			// but whatever it be it would not affect our final answer
+			node->depthover = curr_depthover;
 			return max;
 		}
 		
 		for (int i=1; i < node->n; i++){
 			int temp = alphabeta(node->child[i],!node->child[i]->state.chance,depth-1,alpha,beta);
+			if (node->child[i]->depthover > curr_depthover && temp == 5000){
+				curr_depthover = node->child[i]->depthover;
+			}			
 			if (temp > alpha) alpha = temp;
 			if (temp > max) max = temp;
 			if (alpha >= beta){
 				// condition for pruning of the tree
 				//node->eval = max; // We are not evaluating node->eval because it can even be greater than max
 				// but whatever it be it would not affect our final answer
+				node->depthover = curr_depthover;
 				return max;
 			}
 		}
 		
+		for (int i=0; i<node->n; i++){
+			free_node(node->child[i]);
+			node->n = 0;
+			node->child[i] = NULL;
+		}
+		
 		node->eval = max;
+		node->depthover = curr_depthover;
 		return max; // no pruning of the tree happened
 		
 	} else {
@@ -1165,40 +1209,63 @@ int alphabeta(tree* node, bool ismax, int depth, int alpha=-2147483648, int beta
 		if (node->n == 0){
 			// this could be a draw or a win
 			alphabeta_counter++; // this variable calculate static calculations so it needs to be incremented
-			return static_value(node); // consider this node to be a leaf node
+			int val = static_value(node);
+			if (val == 5000){
+				node->depthover = depth;
+			} else {
+				node->depthover = -1;
+			}
+			return val; // consider this node to be a leaf node
 		}
 		
-		if (node->n == 1){
+		/*
+		// node->move does not change
+		while (node->n == 1){
 			// there is only one move now
 			commit_move(node, node->child[0]->move);
 			free(node->child[0]);
 			node->n = 0;
 			node->child = NULL;
-			return alphabeta(node, !node->state.chance, depth-1, alpha, beta);
+			gen_moves(node);
 		}
+		*/
 		
 		int min = alphabeta(node->child[0],!node->child[0]->state.chance,depth-1,alpha,beta);
+		int	curr_depthover = node->child[0]->depthover;
+		
 		if (min < beta) beta = min;
 		if (alpha >= beta){
 			// condition for pruning of the tree
 			//node->eval = min; // We are not evaluating node->eval because it can even be lesser than min
 			// but whatever it be it would not affect our final answer
+			node->depthover = curr_depthover;
 			return min;
 		}
 		
 		for (int i=1; i < node->n; i++){
 			int temp = alphabeta(node->child[i],!node->child[i]->state.chance,depth-1,alpha,beta);
+			if (node->child[i]->depthover > curr_depthover && temp == -5000){
+				curr_depthover = node->child[i]->depthover;
+			}
 			if (temp < beta) beta = temp;
 			if (temp < min) min = temp;
 			if (alpha >= beta){
 				// condition for pruning of the tree
 				//node->eval = min; // We are not evaluating node->eval because it can even be lesser than min
 				// but whatever it be it would not affect our final answer
+				node->depthover = curr_depthover;
 				return min;
 			}
 		}
 		
+		for (int i=0; i<node->n; i++){
+			free_node(node->child[i]);
+			node->n = 0;
+			node->child[i] = NULL;
+		}
+		
 		node->eval = min;
+		node->depthover = curr_depthover;
 		return min; // no pruning of the tree happened
 	}
 }
@@ -1223,33 +1290,40 @@ int alphabeta(tree* node, int depth){
 			return static_value(node); // consider this node to be a leaf node
 		}
 		
-		if (node->n == 1){
+		// node->move does not change
+		/*
+		while (node->n == 1){
 			// there is only one move now
 			commit_move(node, node->child[0]->move);
-			node->move.x1 = node->child[0]->move.x1;
-			node->move.y1 = node->child[0]->move.y1;
-			node->move.x2 = node->child[0]->move.x2;
-			node->move.y2 = node->child[0]->move.y2;
 			free(node->child[0]);
 			node->n = 0;
 			node->child = NULL;
-			return alphabeta(node, !node->state.chance, depth-1, alpha, beta);
+			gen_moves(node);
 		}
+		*/
 		
 		// now we cannot directly change to ismax to 0 because currently white is playing because this can be forced_capture moves
 		
 		int max = alphabeta(node->child[0],!node->child[0]->state.chance,depth-1,alpha,beta);
 		node->move = node->child[0]->move; // setting initially this as the best move
+		int curr_depthover = node->child[0]->depthover;
 		if (max > alpha) alpha = max;
 		if (alpha >= beta){
 			// condition for pruning of the tree
 			//node->eval = max; // We are not evaluating node->eval because it can even be greater than max
 			// but whatever it be it would not affect our final answer
+			node->depthover = depth - curr_depthover; // node->depthover represents the no of moves after which checkmate occurs
 			return max;
 		}
 		
 		for (int i=1; i < node->n; i++){
 			int temp = alphabeta(node->child[i],!node->child[i]->state.chance,depth-1,alpha,beta);
+			if (temp == 5000){
+				if (node->child[i]->depthover > curr_depthover){
+					curr_depthover = node->child[i]->depthover;
+					node->move = node->child[i]->move;
+				}
+			}
 			if (temp > alpha) alpha = temp;
 			if (temp > max){
 				max = temp;
@@ -1259,11 +1333,19 @@ int alphabeta(tree* node, int depth){
 				// condition for pruning of the tree
 				//node->eval = max; // We are not evaluating node->eval because it can even be greater than max
 				// but whatever it be it would not affect our final answer
+				node->depthover = depth - curr_depthover; // node->depthover represents the no of moves after which checkmate occurs
 				return max;
 			}
 		}
 		
+		for (int i=0; i<node->n; i++){
+			free_node(node->child[i]);
+			node->n = 0;
+			node->child[i] = NULL;
+		}
+		
 		node->eval = max;
+		node->depthover = depth - curr_depthover; // node->depthover represents the no of moves after which checkmate occurs
 		return max; // no pruning of the tree happened
 		
 		
@@ -1279,31 +1361,39 @@ int alphabeta(tree* node, int depth){
 			return static_value(node); // consider this node to be a leaf node
 		}
 		
-		if (node->n == 1){
+		/*
+		// node->move does not change
+		while (node->n == 1){
 			// there is only one move now
 			commit_move(node, node->child[0]->move);
-			node->move.x1 = node->child[0]->move.x1;
-			node->move.y1 = node->child[0]->move.y1;
-			node->move.x2 = node->child[0]->move.x2;
-			node->move.y2 = node->child[0]->move.y2;
 			free(node->child[0]);
 			node->n = 0;
 			node->child = NULL;
-			return alphabeta(node, !node->state.chance, depth-1, alpha, beta);
+			gen_moves(node);
 		}
+		*/
 		
 		int min = alphabeta(node->child[0],!node->child[0]->state.chance,depth-1,alpha,beta);
 		node->move = node->child[0]->move; // setting initially this as the best move
+		int curr_depthover = node->child[0]->depthover;
 		if (min < beta) beta = min;
 		if (alpha >= beta){
 			// condition for pruning of the tree
 			//node->eval = min; // We are not evaluating node->eval because it can even be lesser than min
 			// but whatever it be it would not affect our final answer
+			node->depthover = depth - curr_depthover; // node->depthover represents the no of moves after which checkmate occurs
 			return min;
 		}
 		
+		
 		for (int i=1; i < node->n; i++){
 			int temp = alphabeta(node->child[i],!node->child[i]->state.chance,depth-1,alpha,beta);
+			if (temp == -5000){
+				if (node->child[i]->depthover > curr_depthover){
+					curr_depthover = node->child[i]->depthover;
+					node->move = node->child[i]->move;
+				}
+			}
 			if (temp < beta) beta = temp;
 			if (temp < min){
 				min = temp; // updating the best move
@@ -1313,72 +1403,51 @@ int alphabeta(tree* node, int depth){
 				// condition for pruning of the tree
 				//node->eval = min; // We are not evaluating node->eval because it can even be lesser than min
 				// but whatever it be it would not affect our final answer
+				node->depthover = depth - curr_depthover; // node->depthover represents the no of moves after which checkmate occurs
 				return min;
 			}
 		}
 		
+		for (int i=0; i<node->n; i++){
+			free_node(node->child[i]);
+			node->n = 0;
+			node->child[i] = NULL;
+		}
+		
 		node->eval = min;
+		node->depthover = depth - curr_depthover; // node->depthover represents the no of moves after which checkmate occurs
 		return min; // no pruning of the tree happened
-	}	
-}
-
-void free_node(tree* node){
-	if (node->child == NULL){
-		free(node);
-		return;
-	} else {
-		for (int i=node->n-1; i>=0; i--){
-			free_node(node->child[i]); // depth first freeing
-		}
-		free(node); // free the current node
-		return;
-	}
-}
-
-void free_root(tree* root){
-	// free the root but not the root node
-	if (root->child == NULL){
-		root->n = 0;
-		root->eval = 0;
-		root->child = NULL;
-	} else {
-		for (int i=root->n-1; i>=0; i--){
-			free_node(root->child[i]); // depth first freeing
-		}
-		root->n = 0;
-		root->eval = 0;
-		root->child = NULL;
 	}	
 }
 
 tree* init_board(){
     tree* root = (tree*)malloc(sizeof(tree));
     root->state.board[0][0] = -1;
-	root->state.board[0][1] = 0;
+	root->state.board[0][1] = 1;
 	root->state.board[0][2] = -1;
-	root->state.board[0][3] = 4;
+	root->state.board[0][3] = 1;
 	root->state.board[0][4] = -1;
-	root->state.board[0][5] = 0;
+	root->state.board[0][5] = 1;
 	root->state.board[0][6] = -1;
-	root->state.board[0][7] = 0;
+	root->state.board[0][7] = 1;
 	
-	root->state.board[1][0] = 3;
+	root->state.board[1][0] = 1;
 	root->state.board[1][1] = -1;
-	root->state.board[1][2] = 0;
+	root->state.board[1][2] = 1;
 	root->state.board[1][3] = -1;
-	root->state.board[1][4] = 0;
+	root->state.board[1][4] = 1;
 	root->state.board[1][5] = -1;
-	root->state.board[1][6] = 0;
+	root->state.board[1][6] = 1;
 	root->state.board[1][7] = -1;
 	
 	root->state.board[2][0] = -1;
-	root->state.board[2][1] = 0;
+	root->state.board[2][1] = 1;
 	root->state.board[2][2] = -1;
-	root->state.board[2][3] = 0;
+	root->state.board[2][3] = 1;
 	root->state.board[2][4] = -1;
-	root->state.board[2][5] = 0;
+	root->state.board[2][5] = 1;
 	root->state.board[2][6] = -1;
-	root->state.board[2][7] = 0;
+	root->state.board[2][7] = 1;
 	
 	root->state.board[3][0] = 0;
 	root->state.board[3][1] = -1;
@@ -1392,39 +1461,38 @@ tree* init_board(){
 	root->state.board[4][0] = -1;
 	root->state.board[4][1] = 0;
 	root->state.board[4][2] = -1;
-	root->state.board[4][3] = 4;
+	root->state.board[4][3] = 0;
 	root->state.board[4][4] = -1;
 	root->state.board[4][5] = 0;
 	root->state.board[4][6] = -1;
 	root->state.board[4][7] = 0;
 	
-	root->state.board[5][0] = 0;
+	root->state.board[5][0] = 2;
 	root->state.board[5][1] = -1;
-	root->state.board[5][2] = 4;
+	root->state.board[5][2] = 2;
 	root->state.board[5][3] = -1;
-	root->state.board[5][4] = 0;
+	root->state.board[5][4] = 2;
 	root->state.board[5][5] = -1;
-	root->state.board[5][6] = 0;
+	root->state.board[5][6] = 2;
 	root->state.board[5][7] = -1;
 	
 	root->state.board[6][0] = -1;
-	root->state.board[6][1] = 0;
+	root->state.board[6][1] = 2;
 	root->state.board[6][2] = -1;
-	root->state.board[6][3] = 0;
+	root->state.board[6][3] = 2;
 	root->state.board[6][4] = -1;
-	root->state.board[6][5] = 0;
+	root->state.board[6][5] = 2;
 	root->state.board[6][6] = -1;
-	root->state.board[6][7] = 0;
+	root->state.board[6][7] = 2;
 	
-	root->state.board[7][0] = 0;
+	root->state.board[7][0] = 2;
 	root->state.board[7][1] = -1;
-	root->state.board[7][2] = 0;
+	root->state.board[7][2] = 2;
 	root->state.board[7][3] = -1;
-	root->state.board[7][4] = 0;
+	root->state.board[7][4] = 2;
 	root->state.board[7][5] = -1;
-	root->state.board[7][6] = 0;
+	root->state.board[7][6] = 2;
 	root->state.board[7][7] = -1;
-
 
 	root->state.chance = 0;
 	root->state.forced_capture[0] = -1;
@@ -1455,25 +1523,35 @@ int main(){
 			minimax_counter = 0;
 			alphabeta(root, depth_search);
 			if (root->eval == prev_eval){
-				printf("Best Move! Evaluation: %d\n",root->eval);
-				cout << "Computer's suggested move was: " << prev_best.x1 << prev_best.y1 << prev_best.x2 << prev_best.y2 << endl;
+				printf("Best Move! ");
 			} else if (root->eval > prev_eval){
-				printf("Brilliant Move! Evaluation: %d\n",root->eval);
-				cout << "Computer's suggested move was: " << prev_best.x1 << prev_best.y1 << prev_best.x2 << prev_best.y2 << endl;
+				printf("Brilliant Move! ");
 			} else if  (prev_eval - root->eval < 20){
-				printf("Good Move! Evaluation: %d\n",root->eval);
-				cout << "Computer's suggested move was: " << prev_best.x1 << prev_best.y1 << prev_best.x2 << prev_best.y2 << endl;
+				printf("Good Move! ");
 			} else if  (prev_eval - root->eval < 70){
-				printf("Mistake! Evaluation: %d\n",root->eval);
-				cout << "Computer's suggested move was: " << prev_best.x1 << prev_best.y1 << prev_best.x2 << prev_best.y2 << endl;
+				printf("Mistake! ");
 			} else {
-				printf("Blunder! Evaluation: %d\n",root->eval);
-				cout << "Computer's suggested move was: " << prev_best.x1 << prev_best.y1 << prev_best.x2 << prev_best.y2 << endl;
+				printf("Blunder! ");
 			}
+			if (root->eval == -5000){
+				cout << "Evaluation: #-" << root->depthover << endl;
+			} else if (root->eval == 5000){
+				cout << "Evaluation: #" << root->depthover << endl;
+			} else {
+				cout << "Evaluation: " << root->eval << endl;
+			}
+			cout << "Computer's suggested move was: " << prev_best.x1 << prev_best.y1 << prev_best.x2 << prev_best.y2 << endl;
 			cout << "Position evaluated: " << alphabeta_counter << endl;
 			cout << "Computer move is: " << root->move.x1 << root->move.y1 << root->move.x2 << root->move.y2 << endl;
 			commit_move(root, root->move);
-			free_root(root);
+			game s1 = root->state; // only game state is required
+			free_node(root);
+			root = NULL;
+			root = (tree*)malloc(sizeof(tree));
+			root->state = s1;
+			root->child = NULL;
+			root->n = 0;
+			root->eval = 0;
 		} else {
 			// white turn and user plays
 			motion m1;
@@ -1485,14 +1563,19 @@ int main(){
 			prev_best.y1 = root->move.y1;
 			prev_best.x2 = root->move.x2;
 			prev_best.y2 = root->move.y2;
-			cout << "Current Evaluation: " << prev_eval << endl;
+			if (prev_eval == -5000){
+				cout << "Current Evaluation: #-" << root->depthover << endl;
+			} else if (prev_eval == 5000){
+				cout << "Current Evaluation: #" << root->depthover << endl;
+			} else {
+				cout << "Current Evaluation: " << prev_eval << endl;
+			}
 			int total_move_size = total_count_valid_moves(root); // no of total avaliable moves
 			motion* all_moves = total_get_valid_moves(root); // an array of motion of size n
 			cout << "Avaliable moves are: " << endl;
 			for (int i=0; i<total_move_size; i++){
 				cout << all_moves[i].x1 << all_moves[i].y1 << all_moves[i].x2 << all_moves[i].y2 << endl;
 			}
-			free_root(root);
 			cout << "Enter your move: ";
 			char c1, c2, c3, c4;
 			scanf(" %c%c%c%c",&c1,&c2,&c3,&c4);
@@ -1508,8 +1591,15 @@ int main(){
 				m1.x2 = c3 - '0';
 				m1.y2 = c4 - '0';
 			}
-			commit_move(root, m1);	
-			free_root(root);
+			commit_move(root, m1);
+			game s1 = root->state; // only game state is required
+			free_node(root);
+			root = NULL;
+			root = (tree*)malloc(sizeof(tree));
+			root->state = s1;
+			root->child = NULL;
+			root->n = 0;
+			root->eval = 0;
 		}	
 	}
 	
