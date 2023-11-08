@@ -8,7 +8,7 @@ int infi = 5000; //greatest integer
 int Max_Move = 30; //defining the maximum no of valid moves for any pawn
 int alphabeta_counter = 0;
 int minimax_counter = 0;
-int depth_search = 8;
+int depth_search = 9;
 
 struct game{
     int board[8][8];
@@ -616,6 +616,7 @@ motion *get_valid_moves(tree* node, int x, int y){
     
 	valid_moves[count].x2 = -1;
 	valid_moves[count].y2 = -1;
+	free(capture);
     return valid_moves;
 }
 
@@ -629,6 +630,7 @@ int count_valid_moves(tree* node, int x, int y){
         }
         count++;
     }
+	free(valid_moves);
     return count;
 }
 
@@ -650,6 +652,7 @@ motion *total_get_valid_moves(tree* node){
 						total_valid_moves[count].y2 = valid_moves[k].y2;
 						count++;
 					}
+					free(valid_moves);
 				} else if(node->state.board[i][j] == 4){
 					total_valid_moves[count].x1 = i;
 					total_valid_moves[count].y1 = j;
@@ -662,6 +665,7 @@ motion *total_get_valid_moves(tree* node){
 						total_valid_moves[count].y2 = valid_moves[k].y2;
 						count++;
 					}
+					free(valid_moves);
 				}
 			} else {
 				if(node->state.board[i][j] == 1){
@@ -674,6 +678,7 @@ motion *total_get_valid_moves(tree* node){
 						total_valid_moves[count].y2 = valid_moves[k].y2;
 						count++;
 					}
+					free(valid_moves);
 				} else if(node->state.board[i][j] == 3){
 					total_valid_moves[count].x1 = i;
 					total_valid_moves[count].y1 = j;
@@ -686,6 +691,7 @@ motion *total_get_valid_moves(tree* node){
 						total_valid_moves[count].y2 = valid_moves[k].y2;
 						count++;
 					}
+					free(valid_moves);
 				} 
 			}
         }
@@ -1001,6 +1007,7 @@ void gen_moves(tree* node){
 		commit_move(temp, all_moves[i]); // this would update the game state
 		node->child[i] = temp; // assigning the child
 	}
+	free(all_moves);
 }
 
 int minimax(tree* node, bool ismax, int depth){
@@ -1570,6 +1577,7 @@ int main(){
 			} else {
 				cout << "Current Evaluation: " << prev_eval << endl;
 			}
+			cout << "Position evaluated: " << alphabeta_counter << endl;
 			int total_move_size = total_count_valid_moves(root); // no of total avaliable moves
 			motion* all_moves = total_get_valid_moves(root); // an array of motion of size n
 			cout << "Avaliable moves are: " << endl;
@@ -1591,6 +1599,7 @@ int main(){
 				m1.x2 = c3 - '0';
 				m1.y2 = c4 - '0';
 			}
+			free(all_moves);
 			commit_move(root, m1);
 			game s1 = root->state; // only game state is required
 			free_node(root);
