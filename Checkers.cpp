@@ -1541,11 +1541,11 @@ int main(){
 				printf("Blunder! ");
 			}
 			if (root->eval == -5000){
-				cout << "Evaluation: #-" << root->depthover << endl;
+				cout << "Evaluation: #-" << root->depthover << " " << "(Depth searched = " << depth_search << ")" << endl;
 			} else if (root->eval == 5000){
-				cout << "Evaluation: #" << root->depthover << endl;
+				cout << "Evaluation: #" << root->depthover << " " << "(Depth searched = " << depth_search << ")" << endl;
 			} else {
-				cout << "Evaluation: " << root->eval << endl;
+				cout << "Evaluation: " << root->eval << " " << "(Depth searched = " << depth_search << ")" << endl;
 			}
 			cout << "Computer's suggested move was: " << prev_best.x1 << prev_best.y1 << prev_best.x2 << prev_best.y2 << endl;
 			cout << "Position evaluated: " << alphabeta_counter << endl;
@@ -1571,11 +1571,11 @@ int main(){
 			prev_best.x2 = root->move.x2;
 			prev_best.y2 = root->move.y2;
 			if (prev_eval == -5000){
-				cout << "Current Evaluation: #-" << root->depthover << endl;
+				cout << "Current Evaluation: #-" << root->depthover << " " << "(Depth searched = " << depth_search << ")" << endl;
 			} else if (prev_eval == 5000){
-				cout << "Current Evaluation: #" << root->depthover << endl;
+				cout << "Current Evaluation: #" << root->depthover << " " << "(Depth searched = " << depth_search << ")" << endl;
 			} else {
-				cout << "Current Evaluation: " << prev_eval << endl;
+				cout << "Current Evaluation: " << prev_eval << " " << "(Depth searched = " << depth_search << ")" << endl;
 			}
 			cout << "Position evaluated: " << alphabeta_counter << endl;
 			int total_move_size = total_count_valid_moves(root); // no of total avaliable moves
